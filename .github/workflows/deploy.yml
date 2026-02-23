@@ -63,13 +63,30 @@ jobs:
           pip install --upgrade pip
           pip install -r requirements.txt
           
-          # Restart the application using supervisor
-          echo "Restarting application..."
-          sudo supervisorctl restart image-caption
+          # Stop any existing uvicorn process
+          echo "Stopping existing application..."
+          pkill -f "uvicorn.*app:app" || true
+          sleep 2
           
-          # Check status
+          # Start application with uvicorn in the background
+          echo "Starting application with uvicorn..."
+          source venv/bin/activate
+          nohup uvicorn app:app --host 0.0.0.0 --port 8000 > app.log 2>&1 &
+          
+          # Wait a moment for the app to start
+          sleep 5
+          
+          # Check if the application is running
           echo "Checking application status..."
-          sudo supervisorctl status image-caption
+          if pgrep -f "uvicorn.*app:app" > /dev/null; then
+            echo "✓ Application started successfully"
+            ps aux | grep "uvicorn.*app:app" | grep -v grep
+          else
+            echo "✗ ERROR: Application failed to start"
+            echo "Last 20 lines of app.log:"
+            tail -20 app.log || echo "No log file found"
+            exit 1
+          fi
           
           echo "Git Pull deployment completed successfully!"
         EOF
