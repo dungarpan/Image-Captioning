@@ -35,7 +35,7 @@ jobs:
           echo "Starting deployment via Git Pull..."
           
           # Navigate to project directory
-          cd /home/ubuntu/Image-captioning
+          cd /home/ubuntu/Image-Captioning
           
           # Check if it's a git repository
           if [ -d ".git" ]; then
@@ -43,10 +43,18 @@ jobs:
             git pull origin main
           else
             echo "Cloning repository..."
-            rm -rf /home/ubuntu/Image-captioning
+            rm -rf /home/ubuntu/Image-Captioning
             cd /home/ubuntu
-            git clone $REPO_URL Image-captioning
-            cd Image-captioning
+            git clone $REPO_URL Image-Captioning
+            cd Image-Captioning
+          fi
+          
+          # Create virtual environment if it doesn't exist
+          if [ ! -d "venv" ]; then
+            echo "Creating virtual environment..."
+            python3 -m venv venv
+          else
+            echo "Virtual environment already exists"
           fi
           
           # Activate virtual environment and install dependencies
