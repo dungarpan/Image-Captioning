@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>Image Caption</h2>
+
+<!-- Form for uploading an image -->
+<form action="/caption" method="POST" enctype="multipart/form-data" class="mb-3">
+    <div class="mb-3">
+        <label for="image" class="form-label">Upload an Image</label>
+        <input type="file" name="image" id="image" class="form-control" required>
+    </div>
+    <button type="submit" class="btn btn-primary">Generate Caption</button>
+</form>
+
+<!-- Display the image and caption if available -->
+{% if image_url and caption %}
+<div class="mb-3">
+    <img src="{{ image_url }}" alt="Image" class="img-fluid">
+</div>
+<p><strong>Caption:</strong> {{ caption }}</p>
+{% endif %}
+
+<a href="/photos" class="btn btn-secondary">Back to Photo Library</a>
+{% endblock %}

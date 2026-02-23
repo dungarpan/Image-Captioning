@@ -1,10 +1,14 @@
-from fastapi import FastAPI, File, UploadFile, HTTPException
-from fastapi.responses import JSONResponse
+from fastapi import FastAPI, File, UploadFile, HTTPException, Request
+from fastapi.responses import JSONResponse, HTMLResponse
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
 from PIL import Image
 from transformers import AutoProcessor, BlipForConditionalGeneration
 import io
 import uvicorn
 from typing import Optional
+
+## This is a test to check deployments to EC2
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -12,6 +16,12 @@ app = FastAPI(
     description="API for generating captions for images using BLIP model",
     version="1.0.0"
 )
+
+# Mount static files (for serving images, CSS, etc.)
+app.mount("/static", StaticFiles(directory="static"), name="static")
+
+# Initialize Jinja2 templates
+templates = Jinja2Templates(directory="templates")
 
 # Global variables to store model and processor
 processor = None
@@ -49,8 +59,9 @@ async def health():
     }
 
 
-@app.post("/caption")
+@app.post("/caption", response_class=HTMLResponse)
 async def generate_caption(
+    request: Request,
     file: UploadFile = File(...),
     max_length: Optional[int] = 50
 ):
@@ -82,15 +93,21 @@ async def generate_caption(
         
         # Decode the generated tokens to text
         caption = processor.decode(outputs[0], skip_special_tokens=True)
-        
-        return JSONResponse(
-            content={
-                "success": True,
+
+        # Save the uploaded image to a static directory (optional)
+        image_path = f"static/uploads/{file.filename}"
+        image.save(image_path)  
+
+        # Render the template with the image and caption
+        return templates.TemplateResponse(
+            "caption.html",
+            {
+                "request": request,
+                "image_url": f"/{image_path}",
                 "caption": caption,
-                "filename": file.filename
-            }
+            },
         )
-        
+
     except Exception as e:
         raise HTTPException(
             status_code=500,
