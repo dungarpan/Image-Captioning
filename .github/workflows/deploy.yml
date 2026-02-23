@@ -1,0 +1,80 @@
+name: Deploy to EC2 via Git Pull
+
+on:
+  push:
+    branches:
+      - main  # Triggers on push to main branch
+  workflow_dispatch:  # Allows manual trigger from GitHub UI
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+    
+    - name: Deploy to EC2 via Git Pull
+      env:
+        PRIVATE_KEY: ${{ secrets.EC2_SSH_KEY }}
+        HOST: ${{ secrets.EC2_HOST }}
+        USER: ${{ secrets.EC2_USER }}
+        REPO_URL: ${{ github.server_url }}/${{ github.repository }}.git
+      run: |
+        # Create SSH directory and add private key
+        mkdir -p ~/.ssh
+        echo "$PRIVATE_KEY" > ~/.ssh/deploy_key.pem
+        chmod 600 ~/.ssh/deploy_key.pem
+        
+        # Add EC2 to known hosts to avoid SSH prompt
+        ssh-keyscan -H $HOST >> ~/.ssh/known_hosts
+        
+        # Deploy via Git Pull
+        echo "Deploying to EC2 via Git Pull..."
+        ssh -i ~/.ssh/deploy_key.pem $USER@$HOST << 'EOF'
+          echo "Starting deployment via Git Pull..."
+          
+          # Navigate to project directory
+          cd /home/ubuntu/Image-captioning
+          
+          # Check if it's a git repository
+          if [ -d ".git" ]; then
+            echo "Existing git repository found, pulling latest changes..."
+            git pull origin main
+          else
+            echo "Cloning repository..."
+            rm -rf /home/ubuntu/Image-captioning
+            cd /home/ubuntu
+            git clone $REPO_URL Image-captioning
+            cd Image-captioning
+          fi
+          
+          # Activate virtual environment and install dependencies
+          echo "Installing dependencies..."
+          source venv/bin/activate
+          pip install --upgrade pip
+          pip install -r requirements.txt
+          
+          # Restart the application using supervisor
+          echo "Restarting application..."
+          sudo supervisorctl restart image-caption
+          
+          # Check status
+          echo "Checking application status..."
+          sudo supervisorctl status image-caption
+          
+          echo "Git Pull deployment completed successfully!"
+        EOF
+        
+        # Cleanup
+        rm ~/.ssh/deploy_key.pem
+    
+    - name: Verify Deployment
+      env:
+        HOST: ${{ secrets.EC2_HOST }}
+      run: |
+        echo "Waiting for application to start..."
+        sleep 10
+        
+        echo "Testing health endpoint..."
+        curl -f http://$HOST/health || echo "Health check failed"
