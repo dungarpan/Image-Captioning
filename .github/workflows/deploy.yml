@@ -40,7 +40,7 @@ jobs:
           # Check if it's a git repository
           if [ -d ".git" ]; then
             echo "Existing git repository found, pulling latest changes..."
-            git pull origin main
+            git pull origin master
           else
             echo "Cloning repository..."
             rm -rf /home/ubuntu/Image-Captioning
@@ -56,7 +56,7 @@ jobs:
           else
             echo "Virtual environment already exists"
           fi
-          
+
           # Activate virtual environment and install dependencies
           echo "Installing dependencies..."
           source venv/bin/activate
