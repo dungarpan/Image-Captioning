@@ -38,16 +38,13 @@ async def load_model():
     print("Model loaded successfully!")
 
 
-@app.get("/")
-async def root():
-    """Root endpoint with API information"""
-    return {
-        "message": "Image Captioning API",
-        "endpoints": {
-            "/caption": "POST - Upload an image to get a caption",
-            "/health": "GET - Check API health status"
-        }
-    }
+@app.get("/", response_class=HTMLResponse)
+async def root(request: Request):
+    """Root endpoint with frontend interface"""
+    return templates.TemplateResponse(
+        "index.html",
+        {"request": request}
+    )
 
 
 @app.get("/health")
@@ -77,7 +74,7 @@ async def generate_caption(
     """
     try:
         # Validate file type
-        if not file.content_type.startswith("image/"):
+        if file.content_type and not file.content_type.startswith("image/"):
             raise HTTPException(
                 status_code=400,
                 detail="File must be an image"
